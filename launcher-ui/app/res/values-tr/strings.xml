@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="licenses_title">Lisanslar ve Katkıda Bulunanlar</string>
+    <string name="licenses_hint">Kaydırmak için Yukarı/Aşağı · Dönmek için Geri</string>
+    <string name="tmdb_setup_title">TMDB kurulumu</string>
+    <string name="home_setup_title">Ana ekran kurulumu</string>
+    <string name="login_account_title">Stremio ve Noiro</string>
+    <string name="home_good_morning">Günaydın</string>
+    <string name="home_good_afternoon">Tünaydın</string>
+    <string name="home_good_evening">İyi akşamlar</string>
+    <string name="where_to_watch_title">Nerede izlenir</string>
+    <string name="login_supporter_required">Aktif bir Noiro Supporter üyeliği gereklidir. Üyeliğinizi noiro.tv üzerinden yönetin, ardından Yeniden dene seçeneğini seçin.</string>
+</resources>

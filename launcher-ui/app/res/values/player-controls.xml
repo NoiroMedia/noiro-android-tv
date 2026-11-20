@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Media3's layout manager reads this value when placing the custom bottom time bar. -->
+    <dimen name="exo_styled_progress_margin_bottom">112dp</dimen>
+    <style name="Noiro.PlayerButton" parent="android:style/Widget.Material.ImageButton">
+        <item name="android:layout_width">48dp</item>
+        <item name="android:layout_height">48dp</item>
+        <item name="android:layout_marginLeft">5dp</item>
+        <item name="android:layout_marginRight">5dp</item>
+        <item name="android:padding">12dp</item>
+        <item name="android:background">@drawable/noiro_player_button</item>
+        <item name="android:tint">@color/noiro_player_button_tint</item>
+        <item name="android:focusable">true</item>
+        <item name="android:clickable">true</item>
+        <item name="android:stateListAnimator">@null</item>
+    </style>
+    <style name="Noiro.PlayerMenu" parent="android:style/Widget.Material.TextView">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">48dp</item>
+        <item name="android:layout_marginLeft">4dp</item>
+        <item name="android:layout_marginRight">4dp</item>
+        <item name="android:paddingLeft">10dp</item>
+        <item name="android:paddingRight">10dp</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:textColor">@color/noiro_player_button_tint</item>
+        <item name="android:background">@drawable/noiro_player_button</item>
+        <item name="android:focusable">true</item>
+        <item name="android:clickable">true</item>
+    </style>
+</resources>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="licenses_title">Lizenzen und Danksagungen</string>
+    <string name="licenses_hint">Auf/Ab zum Scrollen · Zurück zum Schließen</string>
+    <string name="tmdb_setup_title">TMDB einrichten</string>
+    <string name="home_setup_title">Startbildschirm einrichten</string>
+    <string name="login_account_title">Stremio und Noiro</string>
+    <string name="home_good_morning">Guten Morgen</string>
+    <string name="home_good_afternoon">Guten Tag</string>
+    <string name="home_good_evening">Guten Abend</string>
+    <string name="where_to_watch_title">Wo ansehen</string>
+    <string name="login_supporter_required">Eine aktive Noiro Supporter-Mitgliedschaft ist erforderlich. Verwalte deine Mitgliedschaft auf noiro.tv und wähle dann Erneut versuchen.</string>
+</resources>

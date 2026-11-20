@@ -1,0 +1,11 @@
+Nimbus rating artwork by Ivar Brandt, reused unchanged from the Noiro Kodi skin (skin.stremio.locked/media/ratings).
+Upstream: https://github.com/ivarbrandt/skin.nimbus
+Only the PNG artwork is reused; no Kodi XML templates or skin code are imported.
+The upstream artwork license notice is preserved separately, together with CC BY-SA 4.0 and GPL 2.0 license texts.
+Original PNG source files are included unchanged in app/assets/ratings in the NoiroTV-Launcher source repository.
+
+Original rating-directory notice:
+Rating icons and adapted HorizontalRatingSlotTemplate copied from Nimbus by Ivar Brandt, GPL-2.0-or-later. Source: skin.nimbus/xml/Variables_Ratings.xml and resources/rating_images. Adapted window properties, explicit widths/colors, and two-row layout for Stremio for Kodi.
+Hero info chips also adapt FlixInfoIcon from Nimbus Includes.xml with its original masks/flixicon-filled.png texture.
+
+Detail controls also reuse Nimbus masks/flixicon-filled.png and overlays/arrowdown.png.

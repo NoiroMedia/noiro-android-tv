@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="remote_key_service">Кнопки приложений на пульте (Netflix, YouTube, Prime Video, TCL Channel) открывают приложения, выбранные в Noiro, поверх любого приложения. Служба считывает только эти кнопки.</string>
+    <string name="licenses_title">Лицензии и авторы</string>
+    <string name="licenses_hint">Вверх/Вниз — прокрутка · Назад — возврат</string>
+    <string name="tmdb_setup_title">Настройка TMDB</string>
+    <string name="home_setup_title">Настройка главного экрана</string>
+    <string name="login_account_title">Stremio и Noiro</string>
+    <string name="home_good_morning">Доброе утро</string>
+    <string name="home_good_afternoon">Добрый день</string>
+    <string name="home_good_evening">Добрый вечер</string>
+    <string name="where_to_watch_title">Где смотреть</string>
+    <string name="login_supporter_required">Требуется активная подписка Noiro Supporter. Управляйте подпиской на noiro.tv, затем выберите «Повторить».</string>
+</resources>

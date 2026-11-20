@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="licenses_title">Licencias y créditos</string>
+    <string name="licenses_hint">Arriba/Abajo para desplazarse · Atrás para volver</string>
+    <string name="tmdb_setup_title">Configuración de TMDB</string>
+    <string name="home_setup_title">Configurar pantalla de inicio</string>
+    <string name="login_account_title">Stremio y Noiro</string>
+    <string name="home_good_morning">Buenos días</string>
+    <string name="home_good_afternoon">Buenas tardes</string>
+    <string name="home_good_evening">Buenas noches</string>
+    <string name="where_to_watch_title">Dónde ver</string>
+    <string name="login_supporter_required">Se requiere una membresía activa de Noiro Supporter. Gestiona tu membresía en noiro.tv y selecciona Reintentar.</string>
+</resources>

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<merge xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <View android:id="@id/exo_controls_background" android:layout_width="0dp"
+        android:layout_height="0dp" android:background="@drawable/noiro_player_scrim" />
+    <FrameLayout android:id="@id/exo_bottom_bar" android:layout_width="match_parent"
+        android:layout_height="112dp" android:layout_gravity="bottom"
+        android:paddingLeft="24dp" android:paddingRight="24dp" android:paddingBottom="16dp"
+        android:layoutDirection="ltr">
+        <TextView android:id="@+id/noiro_player_title" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:layout_gravity="top"
+            android:paddingTop="8dp" android:layout_marginRight="300dp" android:singleLine="true" android:ellipsize="end"
+            android:textColor="#FFFFFF" android:textSize="19sp" />
+        <TextView android:id="@+id/noiro_player_action_label" android:layout_width="wrap_content"
+            android:layout_height="wrap_content" android:layout_gravity="top|right"
+            android:paddingTop="12dp" android:textColor="#C6D7EC" android:textSize="14sp" />
+        <LinearLayout android:id="@id/exo_time" android:layout_width="wrap_content"
+            android:layout_height="48dp" android:layout_gravity="bottom|left"
+            android:gravity="center_vertical" android:orientation="horizontal"
+            android:importantForAccessibility="noHideDescendants">
+            <TextView android:id="@id/exo_position" android:layout_width="wrap_content"
+                android:layout_height="wrap_content" android:textColor="#FFFFFF" android:textSize="16sp" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="  /  " android:textColor="#AAB3BE" android:textSize="16sp" />
+            <TextView android:id="@id/exo_duration" android:layout_width="wrap_content"
+                android:layout_height="wrap_content" android:textColor="#AAB3BE" android:textSize="16sp" />
+        </LinearLayout>
+        <LinearLayout android:id="@id/exo_basic_controls" android:layout_width="wrap_content"
+            android:layout_height="48dp" android:layout_gravity="bottom|right"
+            android:gravity="center_vertical" android:orientation="horizontal">
+            <ImageButton android:id="@id/exo_rew" style="@style/Noiro.PlayerButton"
+                android:contentDescription="Rewind 10 seconds" android:nextFocusUp="@id/exo_progress" />
+            <ImageButton android:id="@id/exo_play_pause" style="@style/Noiro.PlayerButton"
+                android:contentDescription="Play or pause" android:nextFocusUp="@id/exo_progress" />
+            <ImageButton android:id="@id/exo_ffwd" style="@style/Noiro.PlayerButton"
+                android:contentDescription="Forward 10 seconds" android:nextFocusUp="@id/exo_progress" />
+            <ImageButton android:id="@id/exo_audio_track" style="@style/Noiro.PlayerButton"
+                android:src="@drawable/exo_ic_audiotrack" android:contentDescription="Audio" />
+            <ImageButton android:id="@+id/noiro_subtitles" style="@style/Noiro.PlayerButton"
+                android:src="@drawable/exo_ic_subtitle_on" android:contentDescription="Subtitles" />
+            <ImageButton android:id="@+id/noiro_subtitle_sync" style="@style/Noiro.PlayerButton"
+                android:src="@drawable/noiro_subtitle_sync" android:contentDescription="Subtitle sync" />
+            <ImageButton android:id="@+id/noiro_subtitle_settings" style="@style/Noiro.PlayerButton"
+                android:src="@drawable/noiro_subtitle_tune" android:contentDescription="Subtitle settings" />
+            <ImageButton android:id="@id/exo_settings" style="@style/Noiro.PlayerButton"
+                android:src="@drawable/exo_ic_settings" android:contentDescription="Playback settings" />
+        </LinearLayout>
+    </FrameLayout>
+    <androidx.media3.ui.DefaultTimeBar android:id="@id/exo_progress"
+        android:layout_width="match_parent" android:layout_height="28dp"
+        android:layout_gravity="bottom" android:layout_marginBottom="112dp"
+        android:layout_marginLeft="24dp" android:layout_marginRight="24dp"
+        android:nextFocusDown="@id/exo_play_pause" app:played_color="#8CB8FF"
+        app:scrubber_color="#FFFFFF" app:buffered_color="#66818B99" app:unplayed_color="#50323B48" />
+</merge>

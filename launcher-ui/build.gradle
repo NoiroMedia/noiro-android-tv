@@ -1,0 +1,126 @@
+plugins { id 'com.android.application' version '8.13.2' }
+
+// Public checkouts need no private signing material. Direct assembleRelease is unsigned
+// unless all four variables are supplied; build.sh --release requires the complete set.
+def releaseSigningValues = ['NOIRO_KEYSTORE_PATH', 'NOIRO_KEYSTORE_PASSWORD', 'NOIRO_KEY_ALIAS', 'NOIRO_KEY_PASSWORD']
+        .collectEntries { name -> [(name): providers.environmentVariable(name).orNull] }
+def releaseSigningAvailable = releaseSigningValues.values().every { value -> value != null && !value.isEmpty() }
+def generatedConfig = layout.buildDirectory.dir('generated/source/noiroConfig')
+
+android {
+    namespace 'tv.noiro.launcher'
+    compileSdk 36
+    defaultConfig { applicationId 'tv.noiro.androidtv'; minSdk 28; targetSdk 33 }
+    sourceSets.main {
+        manifest.srcFile 'app/AndroidManifest.xml'
+        java.srcDirs = ['app/src']
+        java.srcDir(generatedConfig)
+        res.srcDirs = ['app/res']
+        assets.srcDirs = ['app/assets']
+    }
+    if (releaseSigningAvailable) {
+        signingConfigs {
+            noiro {
+                storeFile file(releaseSigningValues['NOIRO_KEYSTORE_PATH'])
+                storePassword releaseSigningValues['NOIRO_KEYSTORE_PASSWORD']
+                keyAlias releaseSigningValues['NOIRO_KEY_ALIAS']
+                keyPassword releaseSigningValues['NOIRO_KEY_PASSWORD']
+            }
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            if (releaseSigningAvailable) signingConfig signingConfigs.noiro
+        }
+    }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_1_8; targetCompatibility JavaVersion.VERSION_1_8 }
+    androidResources { noCompress 'ttf' }
+    packaging { resources { excludes += ['META-INF/LICENSE*', 'META-INF/NOTICE*', 'META-INF/DEPENDENCIES'] } }
+}
+
+// Runs for direct Gradle builds as well as build.sh. Only non-secret display defaults
+// may be configured here; metadata credentials are entered in the app's Settings.
+tasks.register('generateNoiroConfig') {
+    def defaults = layout.projectDirectory.file('config.example.properties')
+    def local = layout.projectDirectory.file('config.properties')
+    inputs.file(defaults)
+    inputs.files(provider { local.asFile.isFile() ? [local.asFile] : [] })
+    outputs.dir(generatedConfig)
+    doLast {
+        def values = new Properties()
+        defaults.asFile.withReader('UTF-8') { reader -> values.load(reader) }
+        if (local.asFile.isFile()) local.asFile.withReader('UTF-8') { reader -> values.load(reader) }
+        def setting = { String key, String fallback -> values.getProperty(key, fallback).trim() }
+        def quote = { String value -> '"' + value.replace('\\', '\\\\').replace('"', '\\"')
+                .replace('\r', '\\r').replace('\n', '\\n').replace('\t', '\\t') + '"' }
+        def number = { String key, String fallback ->
+            def value = setting(key, fallback)
+            if (!(value ==~ /-?[0-9]+(\.[0-9]+)?/)) throw new GradleException("${key} must be a decimal number in config.properties")
+            return value
+        }
+        def region = setting('tmdb_region', 'US').toUpperCase(Locale.ROOT)
+        if (!(region ==~ /[A-Z]{2}/)) throw new GradleException('tmdb_region must be a two-letter country code')
+        def target = generatedConfig.get().file('tv/noiro/launcher/Config.java').asFile
+        target.parentFile.mkdirs()
+        target.setText("""package tv.noiro.launcher;
+
+/** Generated non-secret defaults. Change config.properties or configure the app in Settings. */
+final class Config {
+    private Config() {}
+    static final String TMDB_KEY = "";
+    static final String TMDB_REGION = ${quote(region)};
+    static final String LATITUDE = ${quote(number('latitude', '40.7128'))};
+    static final String LONGITUDE = ${quote(number('longitude', '-74.0060'))};
+    static final String CITY = ${quote(setting('city', ''))};
+    static final String LANGUAGE = ${quote(setting('language', 'en'))};
+    static final String CURRENCY = ${quote(setting('currency', 'USD'))};
+    static final String TEMPERATURE = ${quote(setting('temperature', 'auto'))};
+    static final boolean DISABLE_ASSISTANT = false;
+    static final boolean SHOW_CRYPTO = false;
+}
+""", 'UTF-8')
+    }
+}
+dependencies {
+    implementation 'androidx.media3:media3-exoplayer:1.11.1'
+    implementation 'androidx.media3:media3-exoplayer-hls:1.11.1'
+    implementation 'androidx.media3:media3-exoplayer-dash:1.11.1'
+    implementation 'androidx.media3:media3-ui:1.11.1'
+}
+
+// Preserve runtime notices offline; APK packaging exclusions above only avoid duplicate META-INF entries.
+android.sourceSets.main.assets.srcDir(layout.buildDirectory.dir('generated/playbackAssets'))
+tasks.register('bundlePlaybackNotices') {
+    def destination = layout.buildDirectory.file('generated/playbackAssets/licenses/NOTICE-Playback-Dependencies.txt')
+    inputs.files(configurations.releaseRuntimeClasspath)
+    outputs.file(destination)
+    doLast {
+        def target = destination.get().asFile
+        target.parentFile.mkdirs()
+        def text = new StringBuilder('Noiro playback dependencies\n\nAndroidX Media3 and AndroidX support libraries: The Android Open Source Project / Google LLC, Apache License 2.0.\nGuava / failureaccess: Google LLC, Apache License 2.0.\nKotlin standard library and JetBrains annotations: JetBrains s.r.o., Apache License 2.0.\nGradle Wrapper build tooling: Gradle Inc., Apache License 2.0.\nSee LICENSE-Media3-Apache-2.0.txt for the full Apache license.\n\nResolved runtime artifacts and bundled upstream notices:\n')
+        configurations.releaseRuntimeClasspath.resolvedConfiguration.resolvedArtifacts.sort { it.moduleVersion.id.toString() }.each { artifact ->
+            text.append('\n===== ').append(artifact.moduleVersion.id).append(' =====\n')
+            new java.util.zip.ZipFile(artifact.file).withCloseable { zip ->
+                zip.entries().each { entry ->
+                    if (!entry.directory && entry.name.toUpperCase().matches('.*(LICENSE|NOTICE|COPYING).*') && entry.size < 262144) {
+                        text.append(entry.name).append('\n').append(zip.getInputStream(entry).getText('UTF-8')).append('\n')
+                    }
+                    if (entry.name == 'classes.jar') {
+                        new java.util.zip.ZipInputStream(zip.getInputStream(entry)).withCloseable { jar ->
+                            java.util.zip.ZipEntry item
+                            while ((item = jar.nextEntry) != null) {
+                                if (!item.directory && item.name.toUpperCase().matches('.*(LICENSE|NOTICE|COPYING).*')) {
+                                    text.append(item.name).append('\n').append(new String(jar.readAllBytes(), 'UTF-8')).append('\n')
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        target.setText(text.toString(), 'UTF-8')
+    }
+}
+tasks.named('preBuild').configure { dependsOn 'generateNoiroConfig', 'bundlePlaybackNotices' }
+dependencyLocking { lockAllConfigurations() }

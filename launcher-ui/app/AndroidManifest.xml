@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="tv.noiro.launcher"
+    android:versionCode="62"
+    android:versionName="1.8.40">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- Android 11+: without this list the app can't "see" the other apps (getLeanbackLaunchIntentForPackage
+         returns null). The shelf and streaming apps, the live TV apps and, through the <intent>, every TV app
+         (for "All Apps"). -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.HOME" />
+        </intent>
+        <package android:name="com.netflix.ninja" />
+        <package android:name="com.google.android.youtube.tv" />
+        <package android:name="com.amazon.amazonvideo.livingroom" />
+        <package android:name="com.disney.disneyplus" />
+        <package android:name="com.wbd.stream" />
+        <package android:name="com.hbo.hbonow" />
+        <package android:name="com.apple.atve.androidtv.appletv" />
+        <package android:name="com.hulu.livingroomplus" />
+        <package android:name="com.cbs.ott" />
+        <package android:name="com.cbs.ca" />
+        <package android:name="com.peacocktv.peacockandroid" />
+        <package android:name="com.globo.globotv" />
+        <package android:name="com.spotify.tv.android" />
+        <package android:name="com.tcl.tv" />
+        <package android:name="com.google.android.tv" />
+        <package android:name="com.mediatek.wwtv.tvcenter" />
+        <package android:name="com.sony.dtv.tvx" />
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="content" android:host="android.media.tv" />
+        </intent>
+    </queries>
+
+    <uses-feature android:name="android.software.leanback" android:required="false" />
+    <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+
+    <application
+        android:name=".App"
+        android:label="@string/app_name"
+        android:icon="@drawable/icon"
+        android:banner="@drawable/banner"
+        android:allowBackup="false"
+        android:usesCleartextTraffic="false">
+
+        <!-- Settings is internal to Noiro; the app icon enters Home/onboarding. -->
+        <activity
+            android:name=".SettingsActivity"
+            android:process=":home"
+            android:exported="false"
+            android:label="@string/app_name"
+            android:launchMode="singleTask"
+            android:taskAffinity="${applicationId}.settings"
+            android:excludeFromRecents="true"
+            android:screenOrientation="landscape"
+            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|smallestScreenSize|uiMode|density|fontScale|locale|layoutDirection"
+            android:theme="@style/Noiro.Home">
+
+        </activity>
+
+        <!-- Shared catalog UI, launched as an ordinary TV application, never as the system Home. -->
+        <activity
+            android:name=".HomeActivity"
+            android:process=":home"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:launchMode="singleTask"
+            android:screenOrientation="landscape"
+            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|smallestScreenSize|uiMode|density|fontScale|locale|layoutDirection"
+            android:theme="@style/Noiro.Home">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".ExploreActivity"
+            android:process=":home"
+            android:taskAffinity="${applicationId}.explore"
+            android:exported="false"
+            android:screenOrientation="landscape"
+            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|smallestScreenSize|uiMode|density|fontScale|locale|layoutDirection"
+            android:theme="@style/Noiro.Home" />
+
+        <activity android:name=".NoiroPlayerActivity" android:process=":home" android:exported="false"
+            android:excludeFromRecents="true" android:screenOrientation="landscape"
+            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|uiMode|density|fontScale"
+            android:theme="@style/Noiro.Home" />
+
+        <activity android:name=".StreamsActivity" android:process=":home" android:exported="false"
+            android:screenOrientation="landscape" android:theme="@style/Noiro.Home" />
+
+        <activity android:name=".FreeDetailActivity" android:process=":home" android:exported="false"
+            android:screenOrientation="landscape" android:theme="@style/Noiro.Home" />
+
+        <activity android:name=".FreeExploreActivity" android:process=":home" android:exported="false"
+            android:screenOrientation="landscape" android:theme="@style/Noiro.Home" />
+
+        <activity
+            android:name=".DetailActivity"
+            android:process=":home"
+            android:exported="false"
+            android:screenOrientation="landscape"
+            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|smallestScreenSize|uiMode|density|fontScale|locale|layoutDirection"
+            android:theme="@style/Noiro.Home" />
+
+        <activity
+            android:name=".PersonActivity"
+            android:process=":home"
+            android:exported="false"
+            android:screenOrientation="landscape"
+            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|smallestScreenSize|uiMode|density|fontScale|locale|layoutDirection"
+            android:theme="@style/Noiro.Home" />
+
+        <activity
+            android:name=".GridActivity"
+            android:process=":home"
+            android:exported="false"
+            android:screenOrientation="landscape"
+            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|smallestScreenSize|uiMode|density|fontScale|locale|layoutDirection"
+            android:theme="@style/Noiro.Home" />
+
+        <activity
+            android:name=".SeasonActivity"
+            android:process=":home"
+            android:exported="false"
+            android:screenOrientation="landscape"
+            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|smallestScreenSize|uiMode|density|fontScale|locale|layoutDirection"
+            android:theme="@style/Noiro.Home" />
+
+        <activity
+            android:name=".ServicesActivity"
+            android:process=":home"
+            android:exported="false"
+            android:screenOrientation="landscape"
+            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|smallestScreenSize|uiMode|density|fontScale|locale|layoutDirection"
+            android:theme="@style/Noiro.Home" />
+
+        <activity
+            android:name=".TmdbLoginActivity"
+            android:process=":home"
+            android:exported="false"
+            android:screenOrientation="landscape"
+            android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenSize|screenLayout|smallestScreenSize|uiMode|density|fontScale|locale|layoutDirection"
+            android:theme="@style/Noiro.Home" />
+
+        <activity
+            android:name=".TmdbSetupActivity"
+            android:process=":home"
+            android:exported="false"
+            android:screenOrientation="landscape"
+            android:theme="@style/Noiro.Home" />
+
+        <activity
+            android:name=".HomeSetupActivity"
+            android:process=":home"
+            android:exported="false"
+            android:screenOrientation="landscape"
+            android:theme="@style/Noiro.Home" />
+
+        <activity
+            android:name=".OnboardingActivity"
+            android:process=":home"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:screenOrientation="landscape"
+            android:theme="@style/Noiro.Home" />
+
+        <activity
+            android:name=".LicensesActivity"
+            android:process=":home"
+            android:exported="false"
+            android:screenOrientation="landscape"
+            android:theme="@style/Noiro.Home" />
+
+        <activity android:name=".UpdatesActivity" android:process=":home" android:exported="false"
+            android:screenOrientation="landscape" android:theme="@style/Noiro.Home" />
+
+        <!-- launcher-ui/config.sh writes config.json, remote.json and logos here; only the ADB shell may write. -->
+        <provider
+            android:name=".ConfigProvider"
+            android:authorities="${applicationId}.config"
+            android:process=":home"
+            android:exported="true" />
+
+        <provider android:name=".UpdateProvider" android:authorities="${applicationId}.updates"
+            android:process=":home" android:exported="false" android:grantUriPermissions="true" />
+
+    </application>
+</manifest>

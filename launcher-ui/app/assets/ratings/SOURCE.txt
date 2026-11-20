@@ -1,0 +1,14 @@
+Unmodified rating PNGs from Noiro Kodi skin.stremio.locked, originating in Nimbus by Ivar Brandt.
+Upstream: https://github.com/ivarbrandt/skin.nimbus
+See assets/licenses/NOTICE-Nimbus-rating-icons.txt and the accompanying license texts.
+
+SHA-256:
+0a43bb5c1898a04ab5ee4e5a65e5a2d78d235d3886256a38657315c97bd36c10  imdb.png
+db1f3907b4ed11523b580532c1d8eb785577edf35eff242f8e96988f7d4ca21b  letterboxd.png
+6fc1ffbbae47babf49d288f5493031cbbba5e0edb573dc71788cfaccb7823350  rtfresh.png
+0092e5c502e42c9e30c2dde1ef9b32921a7e95ad433456e732fb2cbd14078595  rtrotten.png
+a9022f04a5cffed08f577cc7eb841a394c9df3f6592fd8b5285b48e809315706  popcorn.png
+bfb3be175eccde908343906fed51b6aeccdb9a4b6597bb2bfa4b3c7b834e7868  popcorn_spilt.png
+77809c77a5bec3f8a0c6eb242e6b57c3c474befae71934427d79adf68a906de0  metacritic.png
+83a3d3709adb43376a11b7888fa0dd7526bb711f0a324f613088b6ae791382e3  tmdb.png
+67fea66368dacb41f7143f89a830ab1c29f6b70e58938efa4217a9c4dcbeac10  trakt.png
