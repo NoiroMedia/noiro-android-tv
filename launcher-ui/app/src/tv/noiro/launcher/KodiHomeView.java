@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 /** The system Home: a fixed hero over remote-navigable rows of titles and folders. */
 final class KodiHomeView extends FrameLayout {
@@ -48,6 +49,9 @@ final class KodiHomeView extends FrameLayout {
     private java.util.function.BiConsumer<TvUi.CatalogTile, Tmdb.Title> resultTileDecoration;
     private final float k;
     private final ExecutorService io = Executors.newFixedThreadPool(4);
+    private final ExecutorService trailerIo = Executors.newFixedThreadPool(2);
+    private final TrailerPlaybackPolicy trailerRequests = new TrailerPlaybackPolicy();
+    private Future<?> trailerWork;
     private final ExecutorService artworkIo = Executors.newFixedThreadPool(3);
     private final ExecutorService discoverIo = Executors.newFixedThreadPool(2);
     private final ExecutorService discoverCacheIo = Executors.newSingleThreadExecutor();
@@ -503,6 +507,8 @@ final class KodiHomeView extends FrameLayout {
 
     void resume() {
         resumed = true;
+        AccountState resumedOwner = NoiroAccount.current();
+        if (!owner.owns(resumedOwner.authKey, resumedOwner.uid)) cancelTrailer();
         boolean savedLayout = !resultLandscapeOnly
                 && activity.getSharedPreferences("home-layout", Activity.MODE_PRIVATE).getBoolean("posters", false);
         if (posters != savedLayout) {
@@ -542,12 +548,15 @@ final class KodiHomeView extends FrameLayout {
 
     void pause() {
         resumed = false;
+        cancelTrailer();
         removeCallbacks(loadVisibleDiscover);
         heroVersion.pause();
         if (upNext != null) upNext.pause();
     }
 
     void destroy() {
+        cancelTrailer();
+        trailerIo.shutdownNow();
         generation++;
         artworkEpoch++;
         removeCallbacks(loadVisibleDiscover);
@@ -561,6 +570,7 @@ final class KodiHomeView extends FrameLayout {
     }
 
     void startResults(String heading, boolean editable) {
+        cancelTrailer();
         generation++;
         resultsEditable = editable;
         pinnedHero = null;
@@ -705,6 +715,7 @@ final class KodiHomeView extends FrameLayout {
     }
 
     boolean back() {
+        cancelTrailer();
         if (menuOpen) {
             leaveMenu();
             return true;
@@ -1043,6 +1054,7 @@ final class KodiHomeView extends FrameLayout {
     }
 
     private void switchHomeScope(boolean media) {
+        cancelTrailer();
         savePagePosition();
         page.media = media;
         setMenuExpanded(false);
@@ -1215,13 +1227,18 @@ final class KodiHomeView extends FrameLayout {
         if (old != row) parkArtwork(old, row);
         activeRow = row;
         if (row != null) {
-            row.setVisibility(VISIBLE);
-            row.loadVisibleCards();
-            keepHero = !updateHero;
-            if (!row.focusCard() && updateHero && row.firstCard() != null) {
-                preview(row, row.titles.get(row.position().index));
+            boolean previousKeepHero = keepHero;
+            keepHero = true;
+            try {
+                // Restoring visibility can focus the first card before requestFocus runs.
+                row.setVisibility(VISIBLE);
+                row.loadVisibleCards();
+                row.focusCard();
+            } finally {
+                keepHero = previousKeepHero;
             }
-            keepHero = false;
+            // Successful requestFocus also includes an already-focused target, with no focus callback.
+            if (updateHero && row.firstCard() != null) preview(row, row.titles.get(row.focusedIndex()));
         }
         if (old != null && old != row) old.setVisibility(GONE);
         showNextCatalog();
@@ -1235,6 +1252,7 @@ final class KodiHomeView extends FrameLayout {
     }
 
     private void load() {
+        cancelTrailer();
         generation++;
         loadedPublicCatalogs = usingPublicCatalogs();
         loadedCloud = NoiroAccount.ready();
@@ -1272,15 +1290,22 @@ final class KodiHomeView extends FrameLayout {
         setMenuExpanded(false);
         profileButton.setText(profileName());
         showHero(null, "");
+        refreshCloud();
         showContinueWatching();
         showRecommendations();
-        refreshCloud();
+    }
+
+    private int beginCatalogRefresh() {
+        int run = ++generation;
+        // Catalog refresh invalidates old async work while leaving the focused card in place.
+        if (heroCard != null) loadHero(heroCard);
+        return run;
     }
 
     private void refreshCloud() {
         if (!history.isEmpty()) return;
         checkedAt = android.os.SystemClock.elapsedRealtime();
-        int gen = ++generation;
+        int gen = beginCatalogRefresh();
         AccountState expected = owner;
         String selected = profile;
         boolean cloud = NoiroAccount.ready();
@@ -2134,6 +2159,7 @@ final class KodiHomeView extends FrameLayout {
     }
 
     private void enterPage(String name, String browse, String key, String section) {
+        cancelTrailer();
         page.activeRow = activeRow;
         page.heroFocus = heroInfo.hasFocus() ? heroInfo : heroAction.hasFocus() ? heroAction : null;
         page.hero = heroCard;
@@ -2154,6 +2180,7 @@ final class KodiHomeView extends FrameLayout {
     }
 
     private void open(StudioHome.Card card, Recs.Pick pick) {
+        cancelTrailer();
         if (resultCardOpener != null && pick == null) {
             resultCardOpener.accept(card);
             return;
@@ -2195,16 +2222,7 @@ final class KodiHomeView extends FrameLayout {
                 }
             });
         } else if (card.type.equals("trailer")) {
-            int gen = generation;
-            String browse = page.browse;
-            io.execute(() -> {
-                try {
-                    String url = StudioHome.trailer(expected, card, browse);
-                    if (url.isEmpty()) throw new IllegalStateException();
-                    main(gen, expected, () -> NoiroPlayerActivity.openTrailer(activity,
-                            new TrailerResolver.Result(url, "", ""), card.id, card.name));
-                } catch (Exception failure) { main(gen, expected, this::unavailable); }
-            });
+            playPlexTrailer(expected, card);
         } else {
             int gen = generation;
             io.execute(() -> {
@@ -2226,6 +2244,46 @@ final class KodiHomeView extends FrameLayout {
                 } catch (Exception failure) { main(gen, expected, this::unavailable); }
             });
         }
+    }
+
+    private void cancelTrailer() {
+        trailerRequests.cancel();
+        if (trailerWork != null) { trailerWork.cancel(true); trailerWork = null; }
+    }
+
+    private void playPlexTrailer(AccountState expected, StudioHome.Card card) {
+        TrailerPlaybackPolicy.Ticket ticket = trailerRequests.begin(page, expected);
+        if (ticket == null || trailerIo.isShutdown()) return;
+        String browse = page.browse;
+        Toast.makeText(activity, "Loading trailer…", Toast.LENGTH_SHORT).show();
+        trailerWork = trailerIo.submit(() -> {
+            if (!trailerRequests.pending(ticket)) return;
+            String resolved = "", failureCode = "";
+            try {
+                resolved = StudioHome.trailer(expected, card, browse);
+                if (resolved.isEmpty()) failureCode = "trailer_unavailable";
+            } catch (Exception failure) {
+                failureCode = failure instanceof AccountHttp.Failure
+                        ? ((AccountHttp.Failure) failure).code : "service_unavailable";
+            }
+            final String url = resolved, error = failureCode;
+            activity.runOnUiThread(() -> {
+                boolean deliver = trailerRequests.current(ticket, page, NoiroAccount.current(), resumed)
+                        && !activity.isFinishing() && !activity.isDestroyed();
+                if (!trailerRequests.finish(ticket)) return;
+                trailerWork = null;
+                if (!deliver) return;
+                if (!error.isEmpty()) {
+                    Toast.makeText(activity, TrailerPlaybackPolicy.failureMessage(error), Toast.LENGTH_LONG).show();
+                    return;
+                }
+                if (!NoiroAccount.ready()) {
+                    Toast.makeText(activity, TrailerPlaybackPolicy.failureMessage("supporter_required"), Toast.LENGTH_LONG).show();
+                    return;
+                }
+                NoiroPlayerActivity.openTrailer(activity, new TrailerResolver.Result(url, "", ""), card.id, card.name);
+            });
+        });
     }
 
     private void renderPage(List<StudioHome.Row> catalog) {

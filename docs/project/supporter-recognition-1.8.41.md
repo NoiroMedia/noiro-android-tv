@@ -13,12 +13,18 @@ Account changes and concurrent revocation invalidate delayed results. Existing f
 ## Validation
 
 - Normal debug build: passed.
-- Public regression suite: 38 tests passed, including actual account-code JVM fixtures for lease expiry, malformed grants, account switches, stale requests, optional TMDB, free access and retry scheduling.
+- Public regression suite: 40 tests passed, including actual account-code JVM fixtures for lease expiry, malformed grants, account switches, stale requests, optional TMDB, free access and retry scheduling.
 - Separate backend fixture audit: 31 focused tests passed; current backend source supports membership independently of TMDB. No backend change was needed.
 - Signed release build and release lint: passed.
-- APK identity: Noiro, tv.noiro.androidtv, 1.8.41 / build 63; non-debuggable.
+- APK identity: Noiro, tv.noiro.androidtv, 1.8.41 / build 64; non-debuggable.
 - Signing certificate matches the previously published 1.8.40 APK.
-- APK size: 12,833,755 bytes.
-- APK SHA-256: 591410f8aa46f16e07fb5f56baf78d761486e1274ce0499ab159d504cf3cbf99
+- APK size: 12,836,547 bytes.
+- APK SHA-256: 3adcb29fdd236181ad8d972cdf3b2492d3a24fd9688ef51d67efaa81bc5a8a45
 
 No authenticated test of the reporting customer's actual Noiro-to-Stremio account link was performed. Validation did not interact with Sony TV or change accounts, billing, the website or social posts. Source and APK publication are authorized separately from this validation report.
+
+## Additional catalog fixes before publication
+
+The same release includes the subsequently reported first-card hero issue and trailer click lifecycle handling. Row activation explicitly previews the selected card even when Android does not emit a new focus event. Catalog refresh renews pending hero metadata rather than discarding the stationary first card response. Trailer request ownership is independent of background catalog generations and remains bound to the page, foreground lifecycle and exact account. Cancellation, loading feedback and safe error text are covered by regression tests.
+
+A separate server patch is being prepared for Plex HLS tickets that incorrectly check Kodi selections instead of the enabled Launcher Home catalog. This validation report does not claim that server patch has been deployed.

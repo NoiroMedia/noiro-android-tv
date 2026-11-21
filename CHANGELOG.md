@@ -1,11 +1,13 @@
 # Changelog
 
-## 1.8.41 — Supporter recognition
+## 1.8.41 — Supporter recognition and catalog navigation
 
 - Automatically verify an existing Noiro membership after Stremio sign-in and on restored-session startup, without blocking free app use.
 - Recognize server-confirmed Supporter access independently of an optional TMDB metadata key.
 - Distinguish checking, unlinked accounts and temporary verification failures from confirmed free access.
 - Keep account changes, lease expiry, server-side revocation and the original launcher's access rules enforced.
+- Refresh hero information for the first or restored card when switching catalog rows.
+- Keep trailer clicks independent of catalog refreshes, with cancellation and clear loading/error feedback.
 
 ## 1.8.40 — first public Android TV source release
 
