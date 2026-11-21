@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      SOURCE_SHA256: f5d8a1f5d90e8b44e57a4e0293978b1b24f8e80d81d04978b89610e561b469a7
+      SOURCE_SHA256: e397d3cde56ce711d8c3a60b52afcbdcdf6afe892d5747a41262f3903f27bdaf
       EXPECTED_HEAD: ${{ inputs.expected_head }}
       EXPECTED_TREE: ${{ inputs.expected_tree }}
     steps:
@@ -47,7 +47,7 @@ jobs:
           root = Path(os.environ['GITHUB_WORKSPACE'])
           with zipfile.ZipFile(Path(os.environ['RUNNER_TEMP']) / 'noiro-source.zip') as archive:
               entries = archive.infolist()
-              assert len(entries) == 278
+              assert len(entries) == 281
               assert sum(item.file_size for item in entries) < 8 * 1024 * 1024
               names = set()
               for item in entries:
