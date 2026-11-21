@@ -38,6 +38,12 @@ public class SettingsActivity extends Activity {
     @Override protected void onResume() {
         super.onResume();
         view.resume();
+        if (AppIdentity.standalone(this)) SupporterChecks.start(false, () -> {
+            if (!isFinishing() && !isDestroyed() && view.running) {
+                view.invalidate();
+                view.spoken.readAgain();
+            }
+        });
     }
 
     @Override protected void onPause() {
@@ -254,8 +260,7 @@ public class SettingsActivity extends Activity {
             switch (row) {
                 case ACCOUNT:
                     if (AppIdentity.standalone(getContext())) {
-                        if (NoiroAccount.ready()) return "Stremio + Noiro cloud";
-                        return NoiroAccount.current().signedIn() ? "Stremio · free" : "Browsing without an account";
+                        return SupporterPresentation.label(NoiroAccount.supporterStatus());
                     }
                     return Ui.string(getContext(), NoiroAccount.ready() ? R.string.login_status_connected : R.string.login_status_sign_in);
                 case WHERE_TO_WATCH: return onOff(Prefs.whereToWatch());

@@ -11,6 +11,7 @@ public class HomeActivity extends Activity {
     private AppsDialog apps;
     private int prefsVersion = Prefs.version;
     private String homeLanguage;
+    private boolean resumed;
 
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -25,6 +26,7 @@ public class HomeActivity extends Activity {
     @Override protected void onResume() {
         super.onResume();
         if (isFinishing() || requireSignIn()) return;
+        resumed = true;
         TvConfig.apply(this);
         if (prefsVersion != Prefs.version) {
             prefsVersion = Prefs.version;
@@ -38,7 +40,9 @@ public class HomeActivity extends Activity {
         if (catalogHome != null) catalogHome.resume();
         openFrom(getIntent());
         LauncherUpdates.automatic(this);
-        if (NoiroAccount.configured() && NoiroAccount.beginRefresh()) {
+        if (AppIdentity.standalone(this)) {
+            SupporterChecks.start(false, this::membershipChecked);
+        } else if (NoiroAccount.configured() && NoiroAccount.beginRefresh()) {
             new Thread(() -> {
                 try { NoiroAccount.sync(); } catch (Exception unavailable) { /* Keep a previously verified offline session on transient failures. */ }
                 finally { NoiroAccount.endRefresh(); }
@@ -48,6 +52,10 @@ public class HomeActivity extends Activity {
                 });
             }, "noiro-account-refresh").start();
         }
+    }
+
+    void membershipChecked() {
+        if (resumed && !isFinishing() && !isDestroyed() && catalogHome != null) catalogHome.resume();
     }
 
     private boolean requireSignIn() {
@@ -62,6 +70,7 @@ public class HomeActivity extends Activity {
     }
 
     @Override protected void onPause() {
+        resumed = false;
         if (catalogHome != null) catalogHome.pause();
         super.onPause();
     }

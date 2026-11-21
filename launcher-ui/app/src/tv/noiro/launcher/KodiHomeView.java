@@ -100,6 +100,7 @@ final class KodiHomeView extends FrameLayout {
     private final UpNext upNext;
     private java.util.function.Consumer<StudioHome.Card> resultCardOpener;
     private boolean loadedPublicCatalogs, loadedCloud;
+    private final HomeCatalogFallback publicFallback = new HomeCatalogFallback();
     private final List<StudioHome.Profile> profiles = new ArrayList<>();
     private AccountState owner = AccountState.EMPTY;
     private String profile = "main";
@@ -1277,16 +1278,18 @@ final class KodiHomeView extends FrameLayout {
     }
 
     private void refreshCloud() {
-        if (AppIdentity.standalone(activity) && !NoiroAccount.ready()) {
-            checkedAt = android.os.SystemClock.elapsedRealtime();
-            if (usingPublicCatalogs()) refreshPublicCatalogs();
-            return;
-        }
-        if (!owner.signedIn() || !history.isEmpty()) return;
+        if (!history.isEmpty()) return;
         checkedAt = android.os.SystemClock.elapsedRealtime();
         int gen = ++generation;
         AccountState expected = owner;
         String selected = profile;
+        boolean cloud = NoiroAccount.ready();
+        publicFallback.begin(gen, selected, usingPublicCatalogs(), cloud, publishedStudio);
+        if (AppIdentity.standalone(activity) && !cloud) {
+            requestPublicFallback(gen, expected, selected);
+            return;
+        }
+        if (!owner.signedIn()) return;
         io.execute(() -> {
             try {
                 List<StudioHome.Profile> available = StudioHome.profiles(expected);
@@ -1310,7 +1313,11 @@ final class KodiHomeView extends FrameLayout {
                 StudioHome.Home home = StudioHome.read(expected, selected);
                 main(gen, expected, () -> applyStudio(home, gen, expected, selected));
             } catch (Exception ignored) {
-                // Keep the current profile's rows on transient failures. No fallback to another profile.
+                // Preserve a known custom Home. Public metadata can still fill an unconfigured Main profile.
+                main(gen, expected, () -> {
+                    publicFallback.studioResolved(gen, selected, publishedStudio);
+                    requestPublicFallback(gen, expected, selected);
+                });
             }
         });
         if (!selected.equals("main")) return;
@@ -1339,17 +1346,20 @@ final class KodiHomeView extends FrameLayout {
                 : AppIdentity.standalone(activity) && !current.signedIn();
     }
 
-    private void refreshPublicCatalogs() {
+    private void requestPublicFallback(int gen, AccountState expected, String selected) {
+        if (publicFallback.request(gen, selected)) refreshPublicCatalogs(gen, expected, selected);
+    }
+
+    private void refreshPublicCatalogs(int gen, AccountState expected, String selected) {
         if (!history.isEmpty()) return;
-        final int gen = ++generation;
-        AccountState expected = owner;
         status.setText(Ui.tr("Carregando…", "Loading…"));
         if (rows.getChildCount() == 0) rows.addView(status);
         io.execute(() -> {
             try {
                 List<StudioHome.Row> catalogs = FreeCatalog.rows();
                 main(gen, expected, () -> {
-                    if (!usingPublicCatalogs() || !history.isEmpty()) return;
+                    if (!usingPublicCatalogs() || !history.isEmpty() || !profile.equals(selected)
+                            || !publicFallback.accepts(gen, selected)) return;
                     if (status.getParent() == rows) rows.removeView(status);
                     for (StudioHome.Row row : catalogs) put("free:" + row.catalogId, row);
                     if (rows.getChildCount() == 0) {
@@ -1359,6 +1369,7 @@ final class KodiHomeView extends FrameLayout {
                 });
             } catch (Exception unavailable) {
                 main(gen, expected, () -> {
+                    if (!history.isEmpty() || !profile.equals(selected) || !publicFallback.accepts(gen, selected)) return;
                     status.setText("Couldn't load catalogs. Check your connection and open Discover to retry.");
                     if (rows.getChildCount() == 0) rows.addView(status);
                 });
@@ -1423,7 +1434,11 @@ final class KodiHomeView extends FrameLayout {
 
     private void applyStudio(StudioHome.Home home, int gen, AccountState expected, String selected) {
         publishedStudio = home.hasPublishedRows();
-        if (publishedStudio) removeSection("recommendations");
+        publicFallback.studioResolved(gen, selected, publishedStudio);
+        if (publishedStudio) {
+            removeSection("recommendations");
+            for (String slot : new ArrayList<>(sections.keySet())) if (slot.startsWith("free:")) removeSection(slot);
+        }
         else showRecommendations();
         java.util.Set<String> incoming = new java.util.LinkedHashSet<>();
         for (Object entry : home.order.keySet()) {
@@ -1444,6 +1459,8 @@ final class KodiHomeView extends FrameLayout {
                 }
             });
         }
+        rememberRows();
+        requestPublicFallback(gen, expected, selected);
     }
 
     private void chooseProfile() {

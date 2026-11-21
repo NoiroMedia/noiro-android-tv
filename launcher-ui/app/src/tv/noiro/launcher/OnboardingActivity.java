@@ -29,6 +29,16 @@ public class OnboardingActivity extends Activity {
     private boolean cloudInfo, cloudLogin;
     private String cloudFailure = "";
     private int cloudLink;
+    private SupporterDiscovery.Status displayedMembership = SupporterDiscovery.Status.SIGNED_OUT;
+    private final Runnable membershipPoll = new Runnable() {
+        @Override public void run() {
+            if (!active || !AppIdentity.standalone(OnboardingActivity.this)) return;
+            if (NoiroAccount.current().signedIn() && displayedMembership != NoiroAccount.supporterStatus()) {
+                if (cloudInfo) showCloudInfo(); else showConnected();
+            }
+            main.postDelayed(this, 500);
+        }
+    };
 
     private String text(int id) { return Ui.string(this, id); }
     private String loginTitle() { return AppIdentity.standalone(this) ? "Connect Stremio" : text(R.string.login_title); }
@@ -54,9 +64,12 @@ public class OnboardingActivity extends Activity {
     }
     @Override protected void onResume() {
         super.onResume(); active = true; begin();
+        main.removeCallbacks(membershipPoll);
+        if (AppIdentity.standalone(this)) main.post(membershipPoll);
     }
     @Override protected void onPause() {
         active = false; generation++;
+        main.removeCallbacks(membershipPoll);
         if (worker != null) worker.interrupt();
         super.onPause();
     }
@@ -74,11 +87,12 @@ public class OnboardingActivity extends Activity {
         if (AppIdentity.standalone(this) && (cloudInfo || cloudLogin && NoiroAccount.current().signedIn())) {
             cloudLogin = false;
             showCloudInfo();
+            checkStandaloneMembership(false);
             return;
         }
         if (AppIdentity.standalone(this) && NoiroAccount.current().signedIn()) {
             if (!manage && StreamsActivity.afterLogin(this, getIntent()) != null) openHome();
-            else showConnected();
+            else { showConnected(); checkStandaloneMembership(false); }
         } else if (NoiroAccount.ready()) showConnected();
         else if (NoiroAccount.current().signedIn()) sync();
         else login();
@@ -153,9 +167,9 @@ public class OnboardingActivity extends Activity {
                             try {
                                 NoiroAccount.remember(account);
                                 if (AppIdentity.standalone(this)) {
-                                    if (cloudLogin) { cloudLogin = false; cloudInfo = true; showCloudInfo(); }
+                                    if (cloudLogin) { cloudLogin = false; cloudInfo = true; showCloudInfo(); checkStandaloneMembership(false); }
                                     else if (StreamsActivity.afterLogin(this, getIntent()) != null) openHome();
-                                    else showConnected();
+                                    else { showConnected(); checkStandaloneMembership(false); }
                                 } else sync();
                             }
                             catch (Exception storage) { line(text(R.string.login_storage_failed), 28, TvUi.DIM); }
@@ -179,6 +193,7 @@ public class OnboardingActivity extends Activity {
         worker.start();
     }
     private void sync() {
+        if (AppIdentity.standalone(this)) { checkStandaloneMembership(true); return; }
         final int run = ++generation;
         content.removeAllViews();
         line(text(R.string.login_connecting_noiro), 50, TvUi.INK);
@@ -229,6 +244,10 @@ public class OnboardingActivity extends Activity {
         boolean standalone = AppIdentity.standalone(this);
         line(standalone ? "Stremio connected" : text(R.string.login_connected), 52, TvUi.INK);
         line(NoiroAccount.current().label, 28, TvUi.DIM);
+        if (standalone) {
+            displayedMembership = NoiroAccount.supporterStatus();
+            line(SupporterPresentation.label(displayedMembership), 28, TvUi.INK);
+        }
         line(standalone ? "Basic browsing and playback with your own add-ons are free. Noiro cloud services are optional."
                 : text(R.string.login_ready_help), 28, TvUi.DIM);
         button(text(R.string.login_start), v -> {
@@ -249,8 +268,24 @@ public class OnboardingActivity extends Activity {
         if (worker != null) worker.interrupt();
         cloudLogin = false;
         cloudFailure = "";
-        cloudLink = NoiroAccount.ready() ? 1 : 0;
+        cloudLink = NoiroAccount.current().signedIn() ? 1 : 0;
         showCloudInfo();
+        checkStandaloneMembership(false);
+    }
+
+    private void checkStandaloneMembership(boolean force) {
+        if (!AppIdentity.standalone(this) || !NoiroAccount.current().signedIn()) return;
+        AccountState owner = NoiroAccount.current();
+        boolean started = SupporterChecks.start(force, () -> {
+            if (!active || isFinishing() || isDestroyed()
+                    || !NoiroAccount.current().owns(owner.authKey, owner.uid)) return;
+            cloudFailure = "";
+            if (cloudInfo) showCloudInfo(); else showConnected();
+        });
+        if (started) {
+            cloudFailure = "";
+            if (cloudInfo) showCloudInfo(); else showConnected();
+        }
     }
 
     private void showCloudInfo() {
@@ -259,7 +294,8 @@ public class OnboardingActivity extends Activity {
         line("Noiro cloud · optional", 48, TvUi.INK);
         line("Manage Home and profiles on Noiro.tv, add eligible Plex rows, sync Main profile watching progress and player settings, save a default audio language, and translate supported subtitles with AI. Connect the services you want to use.", 25, TvUi.DIM);
         line("Basic browsing and playback with your own add-ons stay free. Cloud access uses a Noiro Supporter membership and the required account connections.", 24, TvUi.DIM);
-        if (NoiroAccount.ready()) line("Noiro cloud connected", 27, TvUi.INK);
+        displayedMembership = NoiroAccount.supporterStatus();
+        line(SupporterPresentation.detail(displayedMembership), 27, TvUi.INK);
         if (!cloudFailure.isEmpty()) line(cloudMessage(cloudFailure), 25, TvUi.INK);
 
         String[] pages = {"Membership plans", "Connect Stremio", "TMDB setup"};
@@ -277,7 +313,7 @@ public class OnboardingActivity extends Activity {
         steps.setText("1. Sign in at noiro.tv on your phone. Already Supporter or Lifetime? Use your existing paid account.\n"
                 + "2. New customers can create an account and open Supporters to see current plans. Existing members do not need to buy again.\n"
                 + "3. In Account → Connections, link the same Stremio account used on this TV.\n"
-                + "4. In Account → Overview, open Configure Main → Setup → API keys & OAuth → TMDB. Verify and save your key.\n"
+                + "4. Optional metadata: in Account → Overview, open Configure Main → Setup → API keys & OAuth → TMDB. A TMDB key is not required to recognize Supporter access.\n"
                 + "5. Return here and select Check cloud connection. Plex setup is separate in Account → Plex.");
         steps.setPadding(Math.round(30 * k), 0, 0, 0);
         row.addView(steps, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));

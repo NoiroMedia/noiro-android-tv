@@ -146,6 +146,6 @@ public class LanguageHarness {
             cp = os.pathsep.join([str(base), str(classes), str(android)])
             # Compile the current access boundary rather than trusting a previously built APK's classes.
             source = ROOT / "launcher-ui/app/src/tv/noiro/launcher"
-            sources += [str(source / name) for name in ("Prefs.java", "NoiroAccount.java", "SupporterLease.java", "AccountState.java")]
+            sources += [str(source / name) for name in ("Prefs.java", "NoiroAccount.java", "SupporterLease.java", "SupporterDiscovery.java", "AccountState.java")]
             subprocess.run([str(java / "javac"), "-encoding", "UTF-8", "-cp", cp, "-d", str(base), *sources], check=True)
             subprocess.run([str(java / "java"), "-cp", cp, "tv.noiro.launcher.LanguageHarness"], check=True)

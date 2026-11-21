@@ -4,7 +4,7 @@
 
 An open-source media app for Android TV, built for the remote and the big screen.
 
-**Early release: 1.8.40.** Browse movies and series, connect your own Stremio add-ons and watch with the built-in player. Noiro does not provide or host movies, TV shows or streams. Use sources you are authorized to access.
+**Early release: 1.8.41.** Browse movies and series, connect your own Stremio add-ons and watch with the built-in player. Noiro does not provide or host movies, TV shows or streams. Use sources you are authorized to access.
 
 [Download the APK](https://github.com/NoiroMedia/noiro-android-tv/releases/latest) · [Report a problem](https://github.com/NoiroMedia/noiro-android-tv/issues) · [Noiro.tv](https://noiro.tv)
 
@@ -22,7 +22,9 @@ Some source formats require an external compatible app. Availability and playbac
 
 The basic app is free. Existing Noiro Supporter access can connect website Home configurations and profiles, eligible Plex rows, cloud progress/player settings and supported AI subtitle translation. The saved default audio language is a Premium convenience in the official app; manual audio-track selection remains free. Membership, linked services and service availability determine cloud access.
 
-Open **Settings → Stremio & Noiro → Noiro cloud** for the setup guide and phone QR links. Existing Supporter/Lifetime customers should use their existing account. Current plans and account setup are on [Noiro.tv](https://noiro.tv/?page=Supporters).
+After Stremio sign-in, Noiro checks for an existing membership linked to that same Stremio account. Supporter verification does not require a TMDB metadata key. A temporary verification failure is shown separately from confirmed free access.
+
+Open **Settings → Stremio & Noiro → Noiro cloud** for the setup guide, a manual connection check and phone QR links. Existing Supporter/Lifetime customers should use their existing paid account and its linked Stremio account. Current plans and account setup are on [Noiro.tv](https://noiro.tv/?page=Supporters).
 
 The app source is open. A fork can change local features, but access to hosted Noiro services is independently authorized by those services. No cloud backend, signing keys, account credentials or user data are included here.
 

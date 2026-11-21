@@ -143,7 +143,8 @@ public class AccessHarness {
     try{NoiroAccount.progress(null,paid);throw new AssertionError("Expired response granted cloud access");}
     catch(AccountHttp.Failure expected){check(expected.code.equals("supporter_required"));}
     check(!NoiroAccount.ready()&&NoiroAccount.configured()&&AppAccess.ready(new android.content.Context()));
-    check(NoiroAccount.beginAccessRefresh());NoiroAccount.endAccessRefresh();
+    NoiroAccount.SupporterCheck renewal=NoiroAccount.beginSupporterCheck(false);check(renewal!=null);
+    AccountHttp.replies.add(response(true,300));NoiroAccount.checkSupporter(renewal);check(NoiroAccount.ready());
     prepare();
     AccountHttp.replies.add(new AccountHttp.Failure("supporter_required"));
     try{NoiroAccount.progress(null,NoiroAccount.current());throw new AssertionError();}
@@ -163,7 +164,7 @@ public class AccessHarness {
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text(content)
                 paths.append(str(path))
-            paths += [str(source / name) for name in ('NoiroAccount.java', 'AccountState.java', 'SupporterLease.java', 'TmdbCredential.java', 'AppAccess.java')]
+            paths += [str(source / name) for name in ('NoiroAccount.java', 'AccountState.java', 'SupporterLease.java', 'SupporterDiscovery.java', 'TmdbCredential.java', 'AppAccess.java')]
             # The compiler module also works in managed environments that omit
             # the javac convenience executable while retaining the full JDK.
             subprocess.run([java, 'com.sun.tools.javac.Main', '-d', temporary, *paths], check=True)

@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.8.41 — Supporter recognition
+
+- Automatically verify an existing Noiro membership after Stremio sign-in and on restored-session startup, without blocking free app use.
+- Recognize server-confirmed Supporter access independently of an optional TMDB metadata key.
+- Distinguish checking, unlinked accounts and temporary verification failures from confirmed free access.
+- Keep account changes, lease expiry, server-side revocation and the original launcher's access rules enforced.
+
 ## 1.8.40 — first public Android TV source release
 
 - Noiro opens public movie/series catalogs and search without login.

@@ -6,7 +6,7 @@ import org.json.JSONObject;
 
 /** UID-scoped encrypted device account. No client-selected Noiro user IDs. */
 final class NoiroAccount {
-    static final String APP_VERSION = "1.8.40";
+    static final String APP_VERSION = "1.8.41";
     private static SupporterLease lease = SupporterLease.empty();
     private static AccountState leaseOwner = AccountState.EMPTY;
     private static long lastAccessAttempt;
@@ -18,6 +18,17 @@ final class NoiroAccount {
     private static SessionVault vault;
     private static Context app;
     private static boolean refreshing, coldStart = true;
+    private static SupporterDiscovery discovery = new SupporterDiscovery();
+    private static SupporterCheck supporterCheck;
+    /** Opaque account-generation ticket: a queued worker must never adopt a later login. */
+    static final class SupporterCheck {
+        private final AccountState owner;
+        private final SupporterDiscovery generation;
+        private final boolean force;
+        private SupporterCheck(AccountState owner, SupporterDiscovery generation, boolean force) {
+            this.owner = owner; this.generation = generation; this.force = force;
+        }
+    }
     static synchronized void init(Context context) {
         if (vault != null) return;
         app = context.getApplicationContext();
@@ -25,14 +36,23 @@ final class NoiroAccount {
         state = vault.load();
     }
     static AccountState current() { return state; }
-    static synchronized boolean ready() { return state.ready() && leaseOwner.owns(state.authKey, state.uid) && lease.valid(SystemClock.elapsedRealtime()); }
-    static synchronized boolean configured() { return state.ready(); }
+    static synchronized boolean ready() {
+        return (standalone() ? state.signedIn() : state.ready())
+                && leaseOwner.owns(state.authKey, state.uid) && lease.valid(SystemClock.elapsedRealtime());
+    }
+    static synchronized boolean configured() {
+        return standalone() ? state.signedIn() && leaseOwner.owns(state.authKey, state.uid) : state.ready();
+    }
+    static synchronized SupporterDiscovery.Status supporterStatus() {
+        return discovery.status(state.signedIn(), ready());
+    }
     private static boolean standalone() { return app != null && AppIdentity.standalone(app); }
     static synchronized String tmdbKey() { return ready() ? state.tmdbKey : ""; }
     static synchronized void remember(AccountState account) throws Exception {
         if (!account.signedIn()) throw new AccountHttp.Failure("authentication_required");
         String oldUid = state.uid;
         vault.save(account); state = account; lease = SupporterLease.empty(); leaseOwner = AccountState.EMPTY;
+        discovery = new SupporterDiscovery(); supporterCheck = null;
         deviceAccess = ""; accessOwner = AccountState.EMPTY; accessUntil = 0; Recs.clearRatingsCache();
         if (!oldUid.equals(account.uid)) { WatchProgress.clear(); Tmdb.credentialsChanged(app); }
         Prefs.version++;
@@ -40,6 +60,7 @@ final class NoiroAccount {
     static synchronized void signOut() throws Exception {
         WatchProgress.clear();
         vault.clear(); state = AccountState.EMPTY; lease = SupporterLease.empty(); leaseOwner = AccountState.EMPTY;
+        discovery = new SupporterDiscovery(); supporterCheck = null;
         deviceAccess = ""; accessOwner = AccountState.EMPTY; accessUntil = 0; Recs.clearRatingsCache();
         Tmdb.credentialsChanged(app); Prefs.version++;
     }
@@ -63,6 +84,11 @@ final class NoiroAccount {
     static void sync() throws Exception {
         AccountState expected = state;
         if (!expected.signedIn()) throw new AccountHttp.Failure("authentication_required");
+        if (standalone()) {
+            SupporterCheck check = beginSupporterCheck(true);
+            if (check != null) checkSupporter(check);
+            return;
+        }
         JSONObject session;
         try {
             session = AccountHttp.call("https://noiro.tv/api/stremio-for-kodi/v1/session",
@@ -111,19 +137,29 @@ final class NoiroAccount {
         long seconds = ((Number) duration).longValue();
         if (((Number) duration).doubleValue() != seconds) throw new AccountHttp.Failure("server_update_required");
         SupporterLease granted = SupporterLease.grant((Boolean) active, seconds, started);
-        if (!granted.valid(SystemClock.elapsedRealtime())) throw new AccountHttp.Failure("supporter_required");
+        if (!granted.valid(SystemClock.elapsedRealtime())) {
+            if (!standalone() || !((Boolean) active)) throw new AccountHttp.Failure("supporter_required");
+            if (seconds <= 0 || seconds > SupporterLease.MAX_SECONDS || started < 0
+                    || started > Long.MAX_VALUE - seconds * 1000)
+                throw new AccountHttp.Failure("server_update_required");
+            throw new AccountHttp.Failure("service_unavailable"); // A slow reply says nothing about membership.
+        }
         return granted;
     }
     static synchronized boolean beginAccessRefresh() {
         long elapsed = SystemClock.elapsedRealtime();
-        if (checkingAccess || !(standalone() ? state.ready() : state.signedIn()) || elapsed - lastAccessAttempt < 60_000L) return false;
+        if (standalone() || checkingAccess || !state.signedIn() || elapsed - lastAccessAttempt < 60_000L) return false;
         lastAccessAttempt = elapsed; checkingAccess = true; return true;
     }
     static synchronized void endAccessRefresh() { checkingAccess = false; }
     static void refreshAccess() throws Exception {
         AccountState expected = state;
         if (!expected.signedIn()) throw new AccountHttp.Failure("authentication_required");
-        if (standalone() && !expected.ready()) throw new AccountHttp.Failure("supporter_required");
+        if (standalone()) {
+            SupporterCheck check = beginSupporterCheck(true);
+            if (check != null) checkSupporter(check);
+            return;
+        }
         try {
             String token = accessToken(expected);
             long started = SystemClock.elapsedRealtime();
@@ -137,6 +173,94 @@ final class NoiroAccount {
             if (failure.code.equals("authentication_required")) loseCloud(expected, true);
             else if (revokesAccess(failure.code)) loseCloud(expected, false);
             throw failure;
+        }
+    }
+    /** Shared automatic/manual entry point. A forced check bypasses retry delay, never an in-flight request. */
+    static synchronized SupporterCheck beginSupporterCheck(boolean force) {
+        if (!standalone() || !state.signedIn() || supporterCheck != null
+                || !discovery.begin(SystemClock.elapsedRealtime(), force)) return null;
+        supporterCheck = new SupporterCheck(state, discovery, force);
+        Prefs.version++;
+        return supporterCheck;
+    }
+    private static synchronized boolean current(SupporterCheck check) {
+        return check != null && check == supporterCheck && check.generation == discovery
+                && state.owns(check.owner.authKey, check.owner.uid);
+    }
+    static void checkSupporter(SupporterCheck check) throws Exception {
+        if (!current(check)) return;
+        try {
+            String token = accessToken(check.owner);
+            if (!current(check)) return;
+            long started = SystemClock.elapsedRealtime();
+            JSONObject response = AccountHttp.call("https://noiro.tv/api/stremio-for-kodi/v1/launcher-access", null, token, 8000);
+            if (!current(check)) return;
+            if (!check.owner.uid.equals(response.optString("stremioUid"))) throw new AccountHttp.Failure("identity_mismatch");
+            SupporterLease granted = parseLease(response, started);
+            boolean metadata;
+            synchronized (NoiroAccount.class) {
+                if (!current(check)) return;
+                lease = granted; leaseOwner = state;
+                discovery.success(SystemClock.elapsedRealtime(), granted.deadline);
+                metadata = discovery.metadataDue(SystemClock.elapsedRealtime(), check.force);
+                Recs.clearRatingsCache(); Prefs.version++;
+            }
+            if (metadata) refreshOptionalTmdb(check, token);
+        } catch (Exception failure) {
+            supporterFailure(check, failure);
+            throw failure;
+        } finally {
+            synchronized (NoiroAccount.class) {
+                if (current(check)) {
+                    discovery.finish(); supporterCheck = null; Prefs.version++;
+                }
+            }
+        }
+    }
+    private static void refreshOptionalTmdb(SupporterCheck check, String token) throws Exception {
+        if (!current(check)) return;
+        try {
+            JSONObject response = AccountHttp.call("https://noiro.tv/api/stremio-for-kodi/v1/launcher-tmdb", null, token, 8000);
+            if (!current(check)) return;
+            if (!check.owner.uid.equals(response.optString("stremioUid"))) throw new AccountHttp.Failure("identity_mismatch");
+            JSONObject tmdb = response.optJSONObject("tmdb");
+            if (tmdb == null) return; // Optional service failure cannot take away verified membership.
+            String key = tmdb.optBoolean("configured") ? TmdbCredential.normalize(tmdb.optString("apiKey")) : "";
+            if (!key.isEmpty() && !TmdbCredential.validInput(key)) key = "";
+            synchronized (NoiroAccount.class) {
+                if (!current(check)) return;
+                String oldKey = state.tmdbKey;
+                AccountState updated = new AccountState(state.authKey, state.uid, state.label, key, System.currentTimeMillis());
+                vault.save(updated); state = updated;
+                if (!oldKey.equals(key)) Tmdb.credentialsChanged(app);
+                Prefs.version++;
+            }
+        } catch (AccountHttp.Failure failure) {
+            if (membershipDenial(failure.code) || failure.code.equals("identity_mismatch")) throw failure;
+            // Missing/invalid TMDB and transient metadata outages leave the membership lease untouched.
+        } catch (Exception metadataUnavailable) {
+            // An optional credential/storage failure does not prevent already verified paid features.
+        }
+    }
+    private static boolean membershipDenial(String code) {
+        return code.equals("supporter_required") || code.equals("account_link_required")
+                || code.equals("account_unavailable") || code.equals("authentication_required");
+    }
+    private static SupporterDiscovery.Status failureStatus(String code) {
+        return code.equals("supporter_required") ? SupporterDiscovery.Status.FREE
+                : code.equals("account_link_required") ? SupporterDiscovery.Status.LINK_REQUIRED
+                : SupporterDiscovery.Status.UNAVAILABLE;
+    }
+    private static void supporterFailure(SupporterCheck check, Exception failure) throws Exception {
+        synchronized (NoiroAccount.class) {
+            if (!current(check)) return;
+            String code = failure instanceof AccountHttp.Failure ? ((AccountHttp.Failure) failure).code : "service_unavailable";
+            try {
+                if (membershipDenial(code) || code.equals("identity_mismatch") || code.equals("server_update_required"))
+                    loseCloud(check.owner, false);
+            } finally {
+                discovery.failure(failureStatus(code), SystemClock.elapsedRealtime()); Prefs.version++;
+            }
         }
     }
     private static String accessToken(AccountState expected) throws Exception {
@@ -155,6 +279,19 @@ final class NoiroAccount {
         if (!ready()) throw new AccountHttp.Failure("supporter_required");
     }
     private static void cloudFailure(AccountState expected, AccountHttp.Failure failure) throws Exception {
+        if (standalone()) {
+            synchronized (NoiroAccount.class) {
+                if (!state.owns(expected.authKey, expected.uid)) return;
+                if (membershipDenial(failure.code) || failure.code.equals("identity_mismatch") || failure.code.equals("server_update_required")) {
+                    try { loseCloud(expected, false); }
+                    finally {
+                        discovery = new SupporterDiscovery(); supporterCheck = null;
+                        discovery.failure(failureStatus(failure.code), SystemClock.elapsedRealtime()); Prefs.version++;
+                    }
+                }
+            }
+            return;
+        }
         if (failure.code.equals("authentication_required")) loseCloud(expected, true);
         else if (revokesAccess(failure.code)) loseCloud(expected, false);
     }
@@ -211,7 +348,7 @@ final class NoiroAccount {
         return data;
     }
     static synchronized boolean beginRefresh() {
-        if (refreshing || !state.ready() || (!coldStart && System.currentTimeMillis() - state.syncedAt < 15 * 60_000L)) return false;
+        if (standalone() || refreshing || !state.ready() || (!coldStart && System.currentTimeMillis() - state.syncedAt < 15 * 60_000L)) return false;
         coldStart = false; refreshing = true; return true;
     }
     static synchronized void endRefresh() { refreshing = false; }
