@@ -979,7 +979,6 @@ public class NoiroPlayerActivity extends Activity {
                     EmbeddedSubtitleReader.Result embedded = null;
                     boolean unavailable = false;
                     try {
-                        int[] windows = {0};
                         embedded = EmbeddedSubtitleReader.read(playback.source, target, durationMs, positionMs,
                                 (timing, count, kind) -> {
                                     java.util.concurrent.FutureTask<List<TimedSubtitles.Cue>> lookup =
@@ -994,8 +993,7 @@ public class NoiroPlayerActivity extends Activity {
                                     return lookup;
                                 },
                                 preview -> {
-                                    if (windows[0]++ < 2)
-                                        previews.execute(() -> translateSubtitlePreview(playback, preview, target, run, display, cache.get()));
+                                    previews.execute(() -> translateSubtitlePreview(playback, preview, target, run, display, cache.get()));
                                 },
                                 progress -> main.post(() -> {
                                     if (subtitleActive(run) && !display.started && !display.finished)

@@ -176,7 +176,7 @@ final class EmbeddedSubtitleReader {
         }
 
         void indexed(Result result) {
-            if (result.cues.isEmpty() || batches >= 2) return;
+            if (result.cues.isEmpty()) return;
             for (TimedSubtitles.Cue cue : result.cues) startAfter = Math.max(startAfter, cue.start);
             batches++;
             receive.accept(result);
@@ -189,7 +189,7 @@ final class EmbeddedSubtitleReader {
         }
 
         boolean accept(Output output, boolean exploratory, boolean flushSmallWindow) {
-            if (!output.ready || batches >= 2) return false;
+            if (!output.ready) return false;
             Track track = output.best(target, false);
             if (track == null) return false;
             List<TimedSubtitles.Cue> cues = track.cues;

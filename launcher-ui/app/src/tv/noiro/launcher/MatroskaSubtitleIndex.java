@@ -316,8 +316,8 @@ final class MatroskaSubtitleIndex {
             if (existing != null) return new EmbeddedSubtitleReader.Result(existing, target, true);
             int first = firstNearbyFrame(frames, scale, positionMs);
             int next = first;
-            for (int window : new int[] {FIRST_WINDOW, NEXT_WINDOW}) {
-                if (!startsNearPlayback(frames, first, scale, positionMs)) break;
+            while (next < frames.size() && startsNearPlayback(frames, first, scale, positionMs)) {
+                int window = next == first ? FIRST_WINDOW : NEXT_WINDOW;
                 int end = Math.min(next + window, frames.size());
                 if (end == next) break;
                 List<TimedSubtitles.Cue> cues = readWindow(pool, readers, frames.subList(next, end),
