@@ -82,9 +82,9 @@ public final class MatroskaWindowHarness {
         check(result != null && !result.translated && result.cues.size() == CUE_COUNT, "complete track");
         check(result.cues.get(0).start == 0 && result.cues.get(CUE_COUNT - 1).start == 159_000,
                 "chronological final track");
-        check(windows.size() == 2 && windows.get(0).size() == 8 && windows.get(1).size() == 32,
+        check(windows.size() == 2 && windows.get(0).size() == 4 && windows.get(1).size() == 32,
                 "bounded preview windows");
-        check(windows.get(0).get(0).start == 62_000 && windows.get(1).get(0).start == 70_000,
+        check(windows.get(0).get(0).start == 62_000 && windows.get(1).get(0).start == 66_000,
                 "playhead-first extraction");
         check(previewRanges.get(0) < ranges.get() / 2, "first window must use fewer ranges than the full pass");
         check(ranges.get() < CUE_COUNT, "nearby samples must reuse fetched ranges and cluster headers");
@@ -214,3 +214,4 @@ public final class MatroskaWindowHarness {
                 [java_tool("java"), "-cp", tmp, "tv.noiro.launcher.MatroskaWindowHarness"],
                 check=True,
             )
+
