@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="tv.noiro.launcher"
-    android:versionCode="64"
-    android:versionName="1.8.41">
+    android:versionCode="65"
+    android:versionName="1.8.42">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
@@ -205,3 +205,4 @@
 
     </application>
 </manifest>
+
