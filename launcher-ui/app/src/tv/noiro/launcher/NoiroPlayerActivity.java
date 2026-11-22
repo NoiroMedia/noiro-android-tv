@@ -1069,7 +1069,7 @@ public class NoiroPlayerActivity extends Activity {
                                           String target, int run, SubtitleProgress display,
                                           java.util.concurrent.Future<List<TimedSubtitles.Cue>> lookup) {
         try {
-            if (awaitSavedSubtitles(lookup) != null) return;
+            if (lookup != null && lookup.isDone() && awaitSavedSubtitles(lookup) != null) return;
             String srt = DirectSubtitles.srt(preview.cues);
             java.util.function.Consumer<List<TimedSubtitles.Cue>> publish =
                     cues -> main.post(() -> showSubtitleProgress(run, target, display, cues, true));

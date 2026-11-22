@@ -36,7 +36,7 @@ import java.util.regex.Pattern;
 final class EmbeddedSubtitleReader {
     private static final int MAX_SAMPLE_BYTES = 256 * 1024;
     private static final int MAX_CUES = 10_000;
-    private static final int FIRST_WINDOW = 8, SECOND_WINDOW = 32;
+    private static final int FIRST_WINDOW = 4, SECOND_WINDOW = 32;
     private static final int PREVIEW_READ_BYTES = 512 * 1024, FULL_READ_BYTES = 8 * 1024 * 1024;
     private static final long PREVIEW_LOOKBACK_MS = 8_000;
     private static final long SEEK_PREVIEW_AFTER_MS = 45_000;

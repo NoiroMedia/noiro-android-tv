@@ -26,7 +26,7 @@ final class MatroskaSubtitleIndex {
     private static final long INFO = 0x1549A966L, TRACKS = 0x1654AE6BL, CLUSTER = 0x1F43B675L;
     private static final long CUES = 0x1C53BB6BL, TAGS = 0x1254C367L;
     private static final int MAX_CUES = 10_000;
-    private static final int FIRST_WINDOW = 8;
+    private static final int FIRST_WINDOW = 4;
     private static final int NEXT_WINDOW = 32;
 
     interface Reader {
@@ -312,7 +312,7 @@ final class MatroskaSubtitleIndex {
         AtomicInteger completed = new AtomicInteger();
         List<TimedSubtitles.Cue> result = new ArrayList<>(frames.size());
         try {
-            List<TimedSubtitles.Cue> existing = cachedCues(cached, 350);
+            List<TimedSubtitles.Cue> existing = cachedCues(cached, 0);
             if (existing != null) return new EmbeddedSubtitleReader.Result(existing, target, true);
             int first = firstNearbyFrame(frames, scale, positionMs);
             int next = first;
@@ -323,7 +323,7 @@ final class MatroskaSubtitleIndex {
                 List<TimedSubtitles.Cue> cues = readWindow(pool, readers, frames.subList(next, end),
                         track.number, scale, completed, frames.size(), progress);
                 result.addAll(cues);
-                existing = cachedCues(cached, next == first ? 350 : 0);
+                existing = cachedCues(cached, 0);
                 if (existing != null) return new EmbeddedSubtitleReader.Result(existing, target, true);
                 if (end < frames.size() || first > 0) preview.accept(new EmbeddedSubtitleReader.Result(cues, track.language));
                 next = end;
