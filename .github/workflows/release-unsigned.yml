@@ -21,7 +21,7 @@ jobs:
         run: |
           (yes || true) | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0"
       - name: Build unsigned release
-        run: cd launcher-ui && ./gradlew assembleRelease
+        run: cd launcher-ui && ./gradlew assembleDebug assembleRelease
       - name: Run public regression checks
         run: python3 -m unittest discover -s tests -p 'test_noiro_*.py' -v
       - name: Upload unsigned release
