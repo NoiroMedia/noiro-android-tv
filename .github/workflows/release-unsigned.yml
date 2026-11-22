@@ -1,0 +1,34 @@
+name: Build unsigned Android TV release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install pinned Android platform
+        shell: bash
+        run: |
+          (yes || true) | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0"
+      - name: Build unsigned release
+        run: cd launcher-ui && ./gradlew assembleRelease
+      - name: Run public regression checks
+        run: python3 -m unittest discover -s tests -p 'test_noiro_*.py' -v
+      - name: Upload unsigned release
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: noiro-android-tv-unsigned
+          path: launcher-ui/build/outputs/apk/release/*-unsigned.apk
+          if-no-files-found: error
+          retention-days: 7
+
